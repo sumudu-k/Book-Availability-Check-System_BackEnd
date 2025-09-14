@@ -53,38 +53,47 @@ export function registerUser(req, res) {
 
 
 // login a user
-export function loginUser(req,res){
-    const userData= req.body;
+export function loginUser(req, res) {
+  const { email, password } = req.body;
 
-    UserModel.find({email:userData.email}).then((users)=>{
-        if(users.length==0){
-                res.status(404).json({message:"User not found"})
-        }else{
-            const user= users[0];
-        const isPasswordCorrect=bcrypt.compareSync(userData.password,user.password)
-        if(isPasswordCorrect){
-            const token=jwt.sign({
-                firstname:user.firstname,
-                lastname:user.lastname,
-                type:user.type,
-                email:user.email
-            },process.env.SECRET)
-            res.status(200).json({
-                message:"login successfull",
-                token:token,
-            user:{
-                firstname:user.firstname,
-                lastname:user.lastname,
-                type:user.type,
-                email:user.email
-            }
-            })
-        }else{
-            res.status(401).json({message:"incorrect password"})
-        }
-    }
+  UserModel.findOne({ email })
+    .then((user) => {
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const isPasswordCorrect = bcrypt.compareSync(password, user.password);
+      if (!isPasswordCorrect) {
+        return res.status(401).json({ message: "Incorrect password" });
+      }
+
+      const token = jwt.sign(
+        {
+          firstname: user.firstname,
+          lastname: user.lastname,
+          type: user.type,
+          email: user.email,
+        },
+        process.env.SECRET
+      );
+
+      return res.status(200).json({
+        message: "Login successful",
+        token,
+        user: {
+          firstname: user.firstname,
+          lastname: user.lastname,
+          type: user.type,
+          email: user.email,
+        },
+      });
     })
+    .catch((err) => {
+      console.error("Login error:", err);
+      res.status(500).json({ message: "Something went wrong", error: err.message });
+    });
 }
+
 
 export function isAdmin(req){
     if(req.userDetails?.type=="admin"){
